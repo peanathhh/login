@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.flutter_login1"
-        minSdk = 23 // ✅ increase from 21 to 23
+        minSdk = flutter.minSdkVersion // ✅ increase from 21 to 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

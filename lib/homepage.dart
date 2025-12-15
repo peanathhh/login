@@ -3,10 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_login1/lyricspage.dart';
 import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+
+
 
 
 class HomePage extends StatelessWidget {
+  final User? user = FirebaseAuth.instance.currentUser;
   final List<Map<String, String>> songs = [
+    
 
     {
       'title': 'Perfect',
@@ -430,7 +437,7 @@ Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(
       title: const Text(
-        '🎵 Song Lyrics Display',
+        'Playlist',
         style: TextStyle(
           color: Colors.black,
           fontWeight: FontWeight.bold,
@@ -469,34 +476,119 @@ Widget build(BuildContext context) {
           fit: BoxFit.cover,
         ),
       ),
+child: Column(
+  children: [
+    // ==========================
+    // 👤 GOOGLE USER INFO CARD
+    // ==========================
+    if (user != null)
+      Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundImage: user!.photoURL != null
+                  ? NetworkImage(user!.photoURL!)
+                  : null,
+              child: user!.photoURL == null
+                  ? const Icon(Icons.person, size: 30)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user!.displayName ?? "No Name",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  user!.email ?? "No Email",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+              
+            ),
+          ],
+        ),
+      ),
+
+      // ==========================
+// 🔐 TEST API REQUEST BUTTON
+// ==========================
+// Padding(
+//   padding: const EdgeInsets.symmetric(vertical: 8),
+//   child: ElevatedButton.icon(
+//     icon: const Icon(Icons.api),
+//     label: const Text("Test API Request"),
+//     onPressed: () async {
+//       if (FirebaseAuth.instance.currentUser == null) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           const SnackBar(
+//             content: Text("Please sign in with Gmail first"),
+//           ),
+//         );
+//         return;
+//       }
+
+//       String? token = await FirebaseAuth
+//           .instance.currentUser
+//           ?.getIdToken();
+
+//       final response = await http.get(
+//         Uri.parse('https://jsonplaceholder.typicode.com/posts/1'),
+//         headers: {
+//           'Authorization': 'Bearer $token',
+//         },
+//       );
+
+//       debugPrint("API Status: ${response.statusCode}");
+//       debugPrint("API Body: ${response.body}");
+
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(
+//           content: Text("API request successful"),
+//         ),
+//       );
+//     },
+//   ),
+// ),
+
+
+    // ==========================
+    // 🎵 SONG LIST
+    // ==========================
+    Expanded(
       child: ListView.builder(
         itemCount: songs.length,
         itemBuilder: (context, index) {
           final song = songs[index];
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: Colors.white.withOpacity(0.85), // semi-transparent for image to show
+            color: Colors.white.withOpacity(0.85),
             elevation: 1.5,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             child: ListTile(
-              leading: Icon(
-                Icons.music_note,
-                color: Colors.grey.shade800,
-              ),
-              title: Text(
-                song['title']!,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black87,
-                ),
-              ),
-              trailing: Icon(
-                Icons.arrow_forward_ios,
-                size: 18,
-                color: Colors.grey.shade600,
-              ),
+              leading: Icon(Icons.music_note, color: Colors.grey.shade800),
+              title: Text(song['title']!, style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              color: Colors.black)),
+              trailing: Icon(Icons.arrow_forward_ios,
+                  size: 18, color: Colors.grey.shade600),
               onTap: () {
                 Navigator.push(
                   context,
@@ -514,6 +606,10 @@ Widget build(BuildContext context) {
         },
       ),
     ),
+  ],
+),
+
+    ),
   );
 }
   
@@ -521,7 +617,7 @@ Widget build(BuildContext context) {
   // ==========================
   // 🔐 Logout Confirmation
   // ==========================
-  void _showLogoutDialog(BuildContext context) {
+void _showLogoutDialog(BuildContext context) {
   showDialog(
     context: context,
     builder: (context) {
@@ -537,14 +633,20 @@ Widget build(BuildContext context) {
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context); // close dialog
+
+              // 🔐 SIGN OUT FROM GOOGLE & FIREBASE
+              await GoogleSignIn().signOut();
+              await FirebaseAuth.instance.signOut();
+
+              // 🔁 GO BACK TO LOGIN
               Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const LoginScreen(), // <-- Use your login widget class
-              ),
-            );
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
             },
             child: const Text(
               "Logout",
@@ -556,4 +658,7 @@ Widget build(BuildContext context) {
     },
   );
 }
+
 }
+
+
