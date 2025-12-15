@@ -36,8 +36,11 @@ dependencies:
   audioplayers: ^6.0.0  # or latest version
   google_sign_in: ^6.3.0   # ✅ add this
   http: ^1.2.3             # ✅ add this if you want API calls
-
+  # just_audio: ^0.9.38
+  firebase_storage: ^12.4.10
+  youtube_player_flutter: ^8.1.2
   cupertino_icons: ^1.0.8
+  # file_picker: ^10.3.7
 
 
 dev_dependencies:
