@@ -20,13 +20,14 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    defaultConfig {
+        defaultConfig {
         applicationId = "com.example.flutter_login1"
-        minSdk = flutter.minSdkVersion // ✅ increase from 21 to 23
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 23 // ✅ Kotlin DSL uses `minSdk`, not minSdkVersion
+        targetSdk = 33 // or flutter.targetSdkVersion if it's defined
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
+
 
     buildTypes {
         release {
