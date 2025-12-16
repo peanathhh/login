@@ -11,6 +11,7 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final firstNameController = TextEditingController();
   final lastNameController = TextEditingController();
   final usernameController = TextEditingController();
@@ -19,27 +20,58 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool isLoading = false;
 
   // ----------------------------------------------------
+  // VALIDATORS
+  // ----------------------------------------------------
+  String? nameValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "Required";
+    }
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return "Numbers are not allowed";
+    }
+    return null;
+  }
+
+  String? usernameValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "Required";
+    }
+    if (RegExp(r'[0-9]').hasMatch(value)) {
+      return "Username must not contain numbers";
+    }
+    return null;
+  }
+
+  String? passwordValidator(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Required";
+    }
+    if (value.length < 9) {
+      return "Password must be at least 9 characters";
+    }
+    return null;
+  }
+
+  // ----------------------------------------------------
   // CONFIRMATION POPUP
   // ----------------------------------------------------
   Future<void> showConfirmDialog() async {
-    final confirm = await showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Registration"),
-          content: const Text("Are you sure you want to create this account?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes, Continue"),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Registration"),
+        content: const Text("Are you sure you want to create this account?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes, Continue"),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -81,14 +113,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       setState(() => isLoading = false);
 
-      // SUCCESS POPUP (with OK button)
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text("Account Created"),
-          content: const Text(
-            "Your account has been created successfully.",
-          ),
+          content: const Text("Your account has been created successfully."),
           actions: [
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
@@ -98,11 +127,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       );
 
-      if (mounted) Navigator.pop(context); // Return to login
+      if (mounted) Navigator.pop(context);
 
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-
       setState(() => isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,7 +138,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-
       setState(() => isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,16 +166,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
               child: Form(
                 key: _formKey,
+                // 👇 THIS IS THE MAGIC LINE
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   children: [
                     const Text(
@@ -161,9 +190,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // First Name
                     TextFormField(
                       controller: firstNameController,
+                      validator: nameValidator,
                       decoration: InputDecoration(
                         labelText: "First Name",
                         prefixIcon: const Icon(Icons.person),
@@ -174,13 +203,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                     const SizedBox(height: 15),
 
-                    // Last Name
                     TextFormField(
                       controller: lastNameController,
+                      validator: nameValidator,
                       decoration: InputDecoration(
                         labelText: "Last Name",
                         prefixIcon: const Icon(Icons.person_outline),
@@ -191,13 +219,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                     const SizedBox(height: 15),
 
-                    // Username
                     TextFormField(
                       controller: usernameController,
+                      validator: usernameValidator,
                       decoration: InputDecoration(
                         labelText: "Username",
                         prefixIcon: const Icon(Icons.account_circle),
@@ -208,14 +235,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                     const SizedBox(height: 15),
 
-                    // Password
                     TextFormField(
                       controller: passwordController,
                       obscureText: true,
+                      validator: passwordValidator,
                       decoration: InputDecoration(
                         labelText: "Password",
                         prefixIcon: const Icon(Icons.lock),
@@ -226,22 +252,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      validator: (v) =>
-                          v!.length < 6 ? "Minimum 6 characters" : null,
                     ),
                     const SizedBox(height: 25),
 
-                    // SIGN UP BUTTON
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: isLoading ? null : showConfirmDialog,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                         child: isLoading
                             ? const CircularProgressIndicator(
                                 color: Colors.white,

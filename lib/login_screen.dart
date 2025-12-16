@@ -150,60 +150,60 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 30),
 
                   // Email/Password Login Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: loginUser,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ),
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   child: ElevatedButton(
+                  //     onPressed: loginUser,
+                  //     style: ElevatedButton.styleFrom(
+                  //       padding: const EdgeInsets.symmetric(vertical: 15),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //     ),
+                  //     child: const Text(
+                  //       "Login",
+                  //       style: TextStyle(fontSize: 18),
+                  //     ),
+                  //   ),
+                  // ),
 
-                  const SizedBox(height: 15),
+                  // const SizedBox(height: 15),
 
                   // Google Sign-In Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: Image.asset(
-                        'assets/google_logo.png', // optional: Google logo
-                        height: 24,
-                        width: 24,
-                      ),
-                      label: const Text('Sign in with Google'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: Colors.black12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        UserCredential? user = await signInWithGoogle();
-                        if (user != null) {
-                          print('User Name: ${user.user?.displayName}');
-                          print('User Email: ${user.user?.email}');
-                          print('User Photo: ${user.user?.photoURL}');
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   child: ElevatedButton.icon(
+                  //     icon: Image.asset(
+                  //       'assets/google_logo.png', // optional: Google logo
+                  //       height: 24,
+                  //       width: 24,
+                  //     ),
+                  //     label: const Text('Sign in with Google'),
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.white,
+                  //       foregroundColor: Colors.black,
+                  //       padding: const EdgeInsets.symmetric(vertical: 15),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //         side: const BorderSide(color: Colors.black12),
+                  //       ),
+                  //     ),
+                  //     onPressed: () async {
+                  //       UserCredential? user = await signInWithGoogle();
+                  //       if (user != null) {
+                  //         print('User Name: ${user.user?.displayName}');
+                  //         print('User Email: ${user.user?.email}');
+                  //         print('User Photo: ${user.user?.photoURL}');
 
-                          // Navigate to homepage
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => HomePage()),
-                          );
-                        }
-                      },
-                    ),
-                  ),
+                  //         // Navigate to homepage
+                  //         Navigator.pushReplacement(
+                  //           context,
+                  //           MaterialPageRoute(builder: (_) => HomePage()),
+                  //         );
+                  //       }
+                  //     },
+                  //   ),
+                  // ),
 
                   const SizedBox(height: 15),
 
