@@ -36,7 +36,7 @@ dependencies:
   audioplayers: ^6.0.0  # or latest version
   google_sign_in: ^6.3.0   # ✅ add this
   http: ^1.2.3             # ✅ add this if you want API calls
-
+  mailer: ^6.0.0
   cupertino_icons: ^1.0.8
 
 

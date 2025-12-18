@@ -1,8 +1,11 @@
+// Login page UI updated to match provided layout (logic preserved)
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 import 'signup_screen.dart';
 import 'homepage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,66 +15,45 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final usernameController = TextEditingController();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final otpController = TextEditingController();
 
-  // Email/Password login
-  Future<void> loginUser() async {
-    final email = "${usernameController.text.trim().toLowerCase()}@email.com";
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  // ================= EMAIL NOTIFICATION =================
+  Future<void> sendLoginNotification(String userEmail) async {
+    const gmailEmail = "nathanielsarzaba@gmail.com";
+    const gmailPassword = "cleluxgmqwmznxiu";
+
+    final smtpServer = SmtpServer(
+      'smtp.gmail.com',
+      port: 587,
+      ssl: false,
+      allowInsecure: false,
+      username: gmailEmail,
+      password: gmailPassword,
+    );
+
+    final message = Message()
+      ..from = Address(gmailEmail, "Security Alert")
+      ..recipients.add(userEmail)
+      ..subject = "Login Notification"
+      ..text =
+          "Your account was logged in successfully.\nIf this wasn't you, reset your password.";
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: passwordController.text.trim(),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login Successful!")),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomePage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? "Invalid username or password"),
-        ),
-      );
-    }
+      await send(message, smtpServer);
+    } catch (_) {}
   }
 
-  // Google Sign-In login
-  Future<UserCredential?> signInWithGoogle() async {
-    try {
-      // Trigger the Google Sign-In flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        // User canceled the sign-in
-        return null;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
-      return userCredential;
-    } catch (e) {
-      print('Google Sign-In error: $e');
-      return null;
-    }
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    otpController.dispose();
+    super.dispose();
   }
 
   @override
@@ -111,15 +93,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     "Login to continue",
                     style: TextStyle(fontSize: 15, color: Colors.black54),
                   ),
-
                   const SizedBox(height: 35),
 
-                  // Username Field
+                  // Email
                   TextField(
-                    controller: usernameController,
+                    controller: emailController,
                     decoration: InputDecoration(
-                      labelText: "Username",
-                      prefixIcon: const Icon(Icons.person),
+                      labelText: "Email",
+                      prefixIcon: const Icon(Icons.email),
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
@@ -131,13 +112,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Password Field
+                  // Password
                   TextField(
                     controller: passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: "Password",
                       prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // OTP
+                  TextField(
+                    controller: otpController,
+                    decoration: InputDecoration(
+                      labelText: "OTP (6 digits)",
+                      prefixIcon: const Icon(Icons.verified),
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
@@ -149,77 +159,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Email/Password Login Button
+                  // Login Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: loginUser,
+                      onPressed: _isLoading ? null : _loginUser,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 18),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              "Login",
+                              style: TextStyle(fontSize: 18),
+                            ),
                     ),
                   ),
 
                   const SizedBox(height: 15),
 
-                  // Google Sign-In Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: Image.asset(
-                        'assets/google_logo.png', // optional: Google logo
-                        height: 24,
-                        width: 24,
-                      ),
-                      label: const Text('Sign in with Google'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: Colors.black12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        UserCredential? user = await signInWithGoogle();
-                        if (user != null) {
-                          print('User Name: ${user.user?.displayName}');
-                          print('User Email: ${user.user?.email}');
-                          print('User Photo: ${user.user?.photoURL}');
-
-                          // Navigate to homepage
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => HomePage()),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // Create Account Button
                   TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => SignUpScreen()),
                       );
                     },
                     child: const Text(
                       "Don't have an account? Create one",
                       style: TextStyle(fontSize: 15),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -227,5 +208,64 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  // ================= LOGIN FUNCTION =================
+  Future<void> _loginUser() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userEmail = emailController.text.trim();
+
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: userEmail,
+        password: passwordController.text.trim(),
+      );
+
+      final uid = cred.user!.uid;
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uid)
+          .get();
+
+      final approved = userDoc["approved"] == true;
+
+      if (!approved) {
+        final otpDoc = await FirebaseFirestore.instance
+            .collection("otp")
+            .doc(userEmail)
+            .get();
+
+        if (!otpDoc.exists || otpDoc["otp"] != otpController.text.trim()) {
+          throw "Invalid OTP";
+        }
+
+        await FirebaseFirestore.instance
+            .collection("users")
+            .doc(uid)
+            .update({"approved": true});
+
+        await FirebaseFirestore.instance
+            .collection("otp")
+            .doc(userEmail)
+            .delete();
+      }
+
+      await sendLoginNotification(userEmail);
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomePage()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
   }
 }

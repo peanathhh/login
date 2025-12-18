@@ -22,7 +22,7 @@ android {
 
         defaultConfig {
         applicationId = "com.example.flutter_login1"
-        minSdk = 23 // ✅ Kotlin DSL uses `minSdk`, not minSdkVersion
+        minSdk = flutter.minSdkVersion // ✅ Kotlin DSL uses `minSdk`, not minSdkVersion
         targetSdk = 33 // or flutter.targetSdkVersion if it's defined
         versionCode = flutter.versionCode
         versionName = flutter.versionName

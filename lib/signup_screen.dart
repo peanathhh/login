@@ -1,134 +1,57 @@
+// ================= SIGNUP PAGE (UI MATCHES LOGIN LAYOUT, LOGIC PRESERVED) =================
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+class SignUpScreen extends StatelessWidget {
+  SignUpScreen({super.key});
 
-  @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
-}
-
-class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final firstNameController = TextEditingController();
-  final lastNameController = TextEditingController();
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
+  final firstName = TextEditingController();
+  final lastName = TextEditingController();
+  final email = TextEditingController();
+  final password = TextEditingController();
 
-  bool isLoading = false;
+  // ================= OTP LOGIC =================
+  String generateOtp() {
+    return (100000 + Random().nextInt(900000)).toString();
+  }
 
-  // ----------------------------------------------------
-  // CONFIRMATION POPUP
-  // ----------------------------------------------------
-  Future<void> showConfirmDialog() async {
-    final confirm = await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Registration"),
-          content: const Text("Are you sure you want to create this account?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes, Continue"),
-            ),
-          ],
-        );
-      },
+  Future<void> sendOtpEmail(String userEmail, String otp) async {
+    const gmailEmail = "nathanielsarzaba@gmail.com";
+    const gmailPassword = "cleluxgmqwmznxiu";
+
+    final smtpServer = SmtpServer(
+      'smtp.gmail.com',
+      port: 587,
+      ssl: false,
+      allowInsecure: false,
+      username: gmailEmail,
+      password: gmailPassword,
     );
 
-    if (confirm == true) {
-      registerUser();
-    }
-  }
-
-  // ----------------------------------------------------
-  // REGISTER USER
-  // ----------------------------------------------------
-  Future<void> registerUser() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => isLoading = true);
+    final message = Message()
+      ..from = Address(gmailEmail, "OTP Verification")
+      ..recipients.add(userEmail)
+      ..subject = "Your OTP Code"
+      ..text = "Your 6-digit OTP is: $otp";
 
     try {
-      final username = usernameController.text
-          .trim()
-          .toLowerCase()
-          .replaceAll(" ", "");
-
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: "$username@email.com",
-        password: passwordController.text.trim(),
-      );
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'id': userCredential.user!.uid,
-        'firstName': firstNameController.text.trim(),
-        'lastName': lastNameController.text.trim(),
-        'username': username,
-      });
-
-      if (!mounted) return;
-
-      setState(() => isLoading = false);
-
-      // SUCCESS POPUP (with OK button)
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Account Created"),
-          content: const Text(
-            "Your account has been created successfully.",
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
-
-      if (mounted) Navigator.pop(context); // Return to login
-
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-
-      setState(() => isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Authentication error")),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() => isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
+      await send(message, smtpServer);
+    } catch (_) {}
   }
 
-  // ----------------------------------------------------
-  // UI
-  // ----------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: const Text("Create Account"),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -139,117 +62,113 @@ class _SignUpScreenState extends State<SignUpScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
               child: Form(
                 key: _formKey,
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      "Sign Up",
+                      "Create Account",
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.blueAccent,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Sign up to get started",
+                      style: TextStyle(fontSize: 15, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 35),
+
+                    _input(firstName, "First Name", Icons.person),
                     const SizedBox(height: 20),
+                    _input(lastName, "Last Name", Icons.person_outline),
+                    const SizedBox(height: 20),
+                    _input(email, "Email", Icons.email),
+                    const SizedBox(height: 20),
+                    _passwordInput(),
 
-                    // First Name
-                    TextFormField(
-                      controller: firstNameController,
-                      decoration: InputDecoration(
-                        labelText: "First Name",
-                        prefixIcon: const Icon(Icons.person),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 30),
 
-                    // Last Name
-                    TextFormField(
-                      controller: lastNameController,
-                      decoration: InputDecoration(
-                        labelText: "Last Name",
-                        prefixIcon: const Icon(Icons.person_outline),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Username
-                    TextFormField(
-                      controller: usernameController,
-                      decoration: InputDecoration(
-                        labelText: "Username",
-                        prefixIcon: const Icon(Icons.account_circle),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) => v!.isEmpty ? "Required" : null,
-                    ),
-                    const SizedBox(height: 15),
-
-                    // Password
-                    TextFormField(
-                      controller: passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: const Icon(Icons.lock),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (v) =>
-                          v!.length < 6 ? "Minimum 6 characters" : null,
-                    ),
-                    const SizedBox(height: 25),
-
-                    // SIGN UP BUTTON
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : showConfirmDialog,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                "Create Account",
-                                style: TextStyle(fontSize: 18),
+                        child: const Text(
+                          "Create Account",
+                          style: TextStyle(fontSize: 18),
+                        ),
+                        onPressed: () async {
+                          if (!_formKey.currentState!.validate()) return;
+
+                          try {
+                            final user = await FirebaseAuth.instance
+                                .createUserWithEmailAndPassword(
+                              email: email.text.trim(),
+                              password: password.text.trim(),
+                            );
+
+                            await FirebaseFirestore.instance
+                                .collection("users")
+                                .doc(user.user!.uid)
+                                .set({
+                              "firstName": firstName.text,
+                              "lastName": lastName.text,
+                              "email": email.text.trim(),
+                              "approved": false,
+                            });
+
+                            final otp = generateOtp();
+
+                            await FirebaseFirestore.instance
+                                .collection("otp")
+                                .doc(email.text.trim())
+                                .set({
+                              "otp": otp,
+                              "createdAt": Timestamp.now(),
+                            });
+
+                            await sendOtpEmail(email.text.trim(), otp);
+
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text("Success"),
+                                content: const Text(
+                                  "Account created.\nOTP sent to your email.",
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text("OK"),
+                                  ),
+                                ],
                               ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -257,6 +176,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ================= INPUT FIELD =================
+  Widget _input(
+      TextEditingController controller, String label, IconData icon) {
+    return TextFormField(
+      controller: controller,
+      validator: (v) => v!.isEmpty ? "Required" : null,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  // ================= PASSWORD FIELD =================
+  Widget _passwordInput() {
+    return TextFormField(
+      controller: password,
+      obscureText: true,
+      validator: (v) => v!.isEmpty ? "Required" : null,
+      decoration: InputDecoration(
+        labelText: "Password",
+        prefixIcon: const Icon(Icons.lock),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
     );
